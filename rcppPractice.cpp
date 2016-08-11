@@ -181,3 +181,211 @@ List rcppSugarTest(){
 message("Running seqOut")
 rcppSugarTest()
 */
+
+
+// testing returning -Inf and NULL
+// [[Rcpp::export]]
+List rcppNA(){
+  return(List::create(Named("NegInf")=R_NegInf,
+                      Named("NULL")=R_NilValue,
+                      Named("NaN")=R_NaN,
+                      Named("NA")=NumericVector::get_na()));
+}
+/***R
+message("Running rcppNA")
+rcppNA()
+*/
+
+
+// how to subset outer dimension of arma cube by IntegerVector
+// [[Rcpp::export]]
+arma::cube subsetCube(arma::cube data, IntegerVector index){
+  if(data.n_slices != index.size()){ //informative error message
+    Rcout << "subsetCube requires an array and index of the same outer dimension!" << std::endl;
+  }
+  arma::cube out = arma::zeros(data.n_rows,data.n_cols,data.n_slices);
+  for(int i=0; i<data.n_slices; i++){
+    out.slice(i) = data.slice(index(i));
+  }
+  return(out);
+}
+/***R
+message("Running subsetCube")
+subsetCube(array(rep(1:10,each=9),c(3,3,10)),c(0,0,0,5,5,6,6,7,8,9))
+*/
+
+
+// how to subset rows of NumericMatrix by IntegerVector
+// [[Rcpp::export]]
+NumericMatrix subsetMat(NumericMatrix data, IntegerVector index){
+  if(data.nrow() != index.size()){
+    Rcout << "subsetMat requires a matrix and index of the same row dimension!" << std::endl;
+  }
+  NumericMatrix out = NumericMatrix(Dimension(data.nrow(),data.ncol()));
+  for(int i=0; i<data.nrow(); i++){
+    out(i,_) = data(index(i),_);
+  }
+  return(out);
+}
+/***R
+message("Running subsetMat")
+subsetMat(matrix(rep(1:10,each=3),ncol=3,byrow=T),c(0,0,0,5,5,6,6,7,8,9))
+*/
+
+
+// how to subset rows of armadillo mat by IntegerVector
+// [[Rcpp::export]]
+arma::mat subsetArmaMat(arma::mat data, IntegerVector index){
+  if(data.n_rows != index.size()){
+    Rcout << "subsetMat requires a matrix and index of the same row dimension!" << std::endl;
+  }
+  arma::mat out = data;
+  for(int i=0; i<data.n_rows; i++){
+    out.row(i) = data.row(index(i));
+  }
+  return(out);
+}
+/***R
+message("Running subsetMat")
+subsetArmaMat(matrix(rep(1:10,each=3),ncol=3,byrow=T),c(0,0,0,5,5,6,6,7,8,9))
+*/
+
+// evaluating dpois through Rcpp
+// [[Rcpp::export]]
+double poisPDF(double x, double lambda){
+  double out = R::dpois(x,lambda,true);
+  return(out);
+}
+/***R
+message("Running poisPDF")
+poisPDF(5,6)
+*/
+
+
+// armadillo cube dimensions
+// [[Rcpp::export]]
+arma::cube cubeMake(int n_iter, NumericVector init_state, int n_particles){
+  return(arma::zeros(n_iter,init_state.length(),n_particles));
+}
+/***R
+message("Running cubeMake")
+cubeMake(10,c(1,2,3),3)
+*/
+
+
+// armadillo subcube testing
+// [[Rcpp::export]]
+arma::cube subCube(arma::cube cubeDat, int first_row, int first_col, int first_slice, int last_row, int last_col, int last_slice){
+  return(cubeDat.subcube(first_row, first_col, first_slice, last_row, last_col, last_slice));
+}
+/***R
+message("Running subCube")
+subCube(array(1:300,c(10,3,10)),0,0,0,2,2,9)
+*/
+
+
+// testing replacing elements by subcube
+// [[Rcpp::export]]
+arma::cube replaceCube(arma::cube data, arma::vec init_state){
+  data.subcube(0,0,0,0,init_state.n_elem-1,data.n_slices-1) = init_state.t();
+  return(data);
+}
+/***R
+message("Running replaceCube")
+replaceCube(array(1:300,c(10,3,10)),c(1,2,3))
+*/
+
+
+// making empty cube except for first row in each sub mat
+// [[Rcpp::export]]
+arma::cube makeCube(int nrow, int nslice ,arma::rowvec init_state){
+  arma::cube out = arma::zeros(nrow,init_state.n_elem,nslice);
+  arma::mat data = arma::zeros(nrow,init_state.n_elem);
+  data.row(0) = init_state;
+  for(int i=0; i<out.n_slices; i++){
+    out.slice(i) = data;
+  }  
+  return(out);
+}
+/***R
+message("Running makeCube")
+makeCube(10,10,c(1,2,3))
+*/
+
+
+// dealing with data frame output from ssa.adaptivetau in C++
+// [[Rcpp::export]]
+List dataframeAdaptTau(Function sim_algorithm,arma::vec theta, arma::vec init_state, IntegerVector times){
+  Rcpp::DataFrame sim_out = sim_algorithm(theta,init_state,times);
+  IntegerVector sim_times = sim_out["time"];
+  NumericMatrix sim_trace = Dimension(times.size(),theta.n_elem+1);
+  NumericVector outS = sim_out["S"];
+  NumericVector outI = sim_out["I"];
+  NumericVector outR = sim_out["R"];
+  sim_trace(_,0) = outS;
+  sim_trace(_,1) = outI;
+  sim_trace(_,2) = outR;
+  return(List::create(Named("sim_times")=sim_times,Named("sim_trace")=sim_trace));
+}
+/***R
+message("Running dataframeAdaptTau")
+library(adaptivetau)
+#stochastic SIR simulation using ssa.adaptivetau
+SIR_stoch <- function(theta,init_state,times){
+
+#fix names to deal with armadillo input vectors
+names(theta) <- c("R0","inf_dur")
+names(init_state) <- c("S","I","R")
+  
+#create transition matrix for Markov process
+  trans <- list(
+      c(S=-1,I=1), #infection
+        c(I=-1,R=1) #recovery
+  )
+  
+#create transition rates for Markov process at time t
+  rates <- function(current_state,theta,t){
+    
+#define parameters
+    beta <- theta[["R0"]] / theta[["inf_dur"]]
+    gamma <- 1/theta[["inf_dur"]]
+    
+#define states
+    S <- current_state[["S"]]
+    I <- current_state[["I"]]
+    R <- current_state[["R"]]
+    N <- S + I + R
+    
+#return rates
+    rates <- c(
+        beta * S * I/N, #infection rate
+        gamma * I #recovery rate
+    )
+    
+    return(rates)
+  }
+  
+#run the simulation
+  mod_out <- as.data.frame(ssa.adaptivetau(init.values=init_state,transitions=trans,rateFunc=rates,params=theta,tf=diff(range(times))))
+  
+#need to interpolate continuous time Markov process output to discrete time points
+  mod_out$time <- mod_out$time + min(times)
+  
+#interpolate output to integer values
+  int_out <- apply(mod_out[,-1],2,function(i){
+    approx(x=mod_out[,1],y=i,xout=times,method="constant")$y
+  })
+  
+  mod_traj <- cbind(time=times,int_out)
+  return(as.data.frame(mod_traj))
+}
+
+# init_theta_sir <- c(R0=1.5,inf_dur=5)
+# init_state_sir <- c(S=999,I=1,R=0)
+# times <- 1:5
+# 
+# dataframeAdaptTau(SIR_stoch,init_theta_sir,init_state_sir,times)
+dataframeAdaptTau(SIR_stoch,c(1.5,5),c(999,1,0),1:5)
+*/
+
+
