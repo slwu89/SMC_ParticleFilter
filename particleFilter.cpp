@@ -105,29 +105,25 @@ arma::cube makeCube(int nrow, int nslice ,arma::rowvec init_state){
  * traj_weight is the weight of each particle trajectory
  */
 // [[Rcpp::export]]
-List particle_filter(Function model, arma::vec theta, arma::vec init_state, NumericMatrix data, int n_particles, bool info){
+List particle_filter(Function model, arma::vec theta, arma::vec init_state, NumericMatrix data, int n_particles, bool progress){
   
   //initialize system
   int n_iter = data.nrow(); //number of iterations for main particle filter
-  //Rcout << "n_iter" << n_iter << std::endl; //DEBUG
   NumericVector time_points = data(_,0); //extract time points to run model over
-  //Rcout << "time_points" << time_points << std::endl; //DEBUG
   double loglike = 0.0;
-  //Rcout << "loglike" << loglike << std::endl; //DEBUG
   arma::mat particle_current_state = arma::zeros(n_particles,init_state.n_elem);
   particle_current_state.each_row() = init_state.t();
-  //Rcout << "particle_current_state" << particle_current_state << std::endl; //DEBUG
   arma::cube particle_traj = makeCube(n_iter+1,n_particles,init_state.t());
   double init_weight = 1 / Rcpp::as<double>(wrap(n_particles));
   NumericVector particle_weight = NumericVector(n_particles,init_weight);
   IntegerVector n_particles_vec = seq_len(n_particles)-1; //0:n_particles needed for armadillo bootstrap resample
   
   //progress bar
-  Progress p(n_iter,info);
-  //Rcout << "system initialized, beginning to loop over times" << std::endl;
+  Progress p(n_iter,progress);
+  
   //run the particle filter
   for(int i=0; i<n_iter; i++){
-    //Rcout << "on time iteration i: " << i << std::endl;
+
     //check for user abort
     if(Progress::check_abort()){
       Rcout << "User abort detected at step " << i << std::endl;
@@ -147,8 +143,6 @@ List particle_filter(Function model, arma::vec theta, arma::vec init_state, Nume
     times(0) = begin;
     times(1) = end;
     double data_point = data(i,1); //current observed data point
-    //Rcout << "times" << times << std::endl; //DEBUG
-    //Rcout << "data_point" << data_point << std::endl; //DEBUG
     
     //resample particles
     IntegerVector index_resampled;
@@ -168,29 +162,25 @@ List particle_filter(Function model, arma::vec theta, arma::vec init_state, Nume
     //propagate particles over particle_current_state
     arma::mat propagate_model_point = arma::zeros(n_particles,init_state.n_elem); //states for each of the j particles after being propagated to next time point
     NumericVector propagate_weight = NumericVector(n_particles); //weights for each of the j particles after being propagated to next time point
+    
     for(int j=0; j<n_particles; j++){ //run model for each particle
-      //Rcout << "propagating particle j: " << j << " at time step i: " << i << std::endl; //DEBUG
+      
       //run model over current time step
       arma::rowvec current_state_j = particle_current_state.row(j);
-      //Rcout << "current_state_j" << current_state_j << std::endl; //DEBUG
       Rcpp::DataFrame particle_j_out = model(theta,current_state_j,times);
       
       //extract trajectories at latest time step
       IntegerVector j_times = particle_j_out["time"];
-      //Rcout << "j_times" << j_times << std::endl; //DEBUG
       NumericVector j_S = particle_j_out["S"];
       NumericVector j_I = particle_j_out["I"];
       NumericVector j_R = particle_j_out["R"];
-      //Rcout << "j_S  " << j_S << std::endl; //DEBUG
-      //Rcout << "j_I  " << j_I << std::endl; //DEBUG
-      //Rcout << "j_R  " << j_R << std::endl; //DEBUG
       propagate_model_point(j,0) = j_S(j_S.size()-1);
       propagate_model_point(j,1) = j_I(j_I.size()-1);
       propagate_model_point(j,2) = j_R(j_R.size()-1);
       
       //compute particle weight
       double j_weight = R::dpois(data_point,propagate_model_point(j,1),false); //incidence is modeled as a Poisson process
-      //Rcout << "j_weight " << j_weight << std::endl; //DEBUG
+      
       //collect parallel trajectories of each particle
       propagate_weight(j) = j_weight;
       particle_traj(i+1,0,j) = j_S(j_S.size()-1);
@@ -253,7 +243,7 @@ SIR_stoch <- function(theta,init_state,times){
   }
   
 #run the simulation
-  mod_out <- as.data.frame(ssa.adaptivetau(init.values=init_state,transitions=trans,rateFunc=rates,params=theta,tf=diff(range(times))))
+  mod_out <- as.data.frame(ssa.adaptivetau(init.values=init_state,transitions=trans,rateFunc=rates,params=theta,tf=diff(range(times)),tl.params=list(extraChecks=FALSE)))
   
 #need to interpolate continuous time Markov process output to discrete time points
   mod_out$time <- mod_out$time + min(times)
@@ -276,6 +266,8 @@ init_state_sir <- c(S=999,I=1,R=0)
 SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,times=1:37)
 
 set.seed(123)
-pf_out <- particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_sir,
-                          data=prev_dat,n_particles=10,info=TRUE)
+system.time(pf_out <- particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_sir,
+                          data=prev_dat,n_particles=100,progress=TRUE))
+
+
 */
