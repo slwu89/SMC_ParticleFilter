@@ -284,18 +284,6 @@ subCube(array(1:300,c(10,3,10)),0,0,0,2,2,9)
 */
 
 
-// testing replacing elements by subcube
-// [[Rcpp::export]]
-arma::cube replaceCube(arma::cube data, arma::vec init_state){
-  data.subcube(0,0,0,0,init_state.n_elem-1,data.n_slices-1) = init_state.t();
-  return(data);
-}
-/***R
-message("Running replaceCube")
-replaceCube(array(1:300,c(10,3,10)),c(1,2,3))
-*/
-
-
 // making empty cube except for first row in each sub mat
 // [[Rcpp::export]]
 arma::cube makeCube(int nrow, int nslice ,arma::rowvec init_state){
