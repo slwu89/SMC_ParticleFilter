@@ -1,6 +1,8 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppProgress)]]
+// [[Rcpp::depends(BH)]]
+#include <boost/function.hpp>
 #include <progress.hpp>
 #include <RcppArmadilloExtensions/sample.h>
 using namespace Rcpp;
@@ -376,4 +378,26 @@ names(init_state) <- c("S","I","R")
 dataframeAdaptTau(SIR_stoch,c(1.5,5),c(999,1,0),1:5)
 */
 
+
+/*
+ * How to pass functions as arguments
+ */
+typedef boost::function<double(double,double)> funcArg;
+
+double funcArg_function(double x, double y){
+  return(x*y);
+}
+
+double funcArg_wrapper(double x, double y, funcArg somefunc){
+  return(somefunc(x,y));
+}
+
+// [[Rcpp::export]]
+void funcArg_run(double x, double y){
+  Rcout << "testing " << funcArg_wrapper(x,y,funcArg_function) << std::endl;
+}
+
+/***R
+funcArg_run(4.23,2.3)
+*/
 
