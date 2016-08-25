@@ -401,3 +401,17 @@ void funcArg_run(double x, double y){
 funcArg_run(4.23,2.3)
 */
 
+
+// testing inserting rows
+// [[Rcpp::export]]
+arma::mat insertRow(){
+  arma::mat A = arma::randu(5,4);
+  arma::mat B = arma::ones(2,4);
+  
+  A.insert_rows(5,B);
+  return(A);
+}
+/***R
+insertRow()
+#looks like you insert it into the empty space.
+*/
