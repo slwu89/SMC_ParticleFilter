@@ -1,6 +1,8 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(BH)]]
+// [[Rcpp::depends(RcppProgress)]]
+#include <progress.hpp>
 #include <boost/function.hpp>
 using namespace Rcpp;
 
@@ -62,6 +64,8 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
 
   int n_event = trans.n_rows;
   
+  Progress p(0, false); //progress to check for user interrupt
+  
   //initialize trace of Monte Carlo simulation
   arma::mat trace = arma::zeros(1,init_state.n_elem);
   trace.row(0) = init_state.t();
@@ -72,6 +76,12 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
   int i = 1;
   
   while(time <= t_end){
+    
+    //check for user abort
+    if(Progress::check_abort()){
+      Rcout << "User abort detected at time: " << time << ", i: " << i << std::endl;
+      return(arma::zeros(2,2));
+    }
     
     if(info){ //print simulation details
       Rcout << "time: " << time << ", i: " << i << std::endl;  
@@ -130,6 +140,8 @@ sim_firstRxn <- gillespie_first(theta,init_state,trans,20,TRUE)
 // [[Rcpp::export]]
 arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat trans, int t_end, bool info = false){
   
+  Progress p(0, false); //progress to check for user interrupt
+  
   //initialize trace of Monte Carlo simulation
   arma::mat trace = arma::zeros(1,init_state.n_elem);
   trace.row(0) = init_state.t();
@@ -140,6 +152,12 @@ arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat tran
   int i = 1;
   
   while(time <= t_end){
+    
+    //check for user abort
+    if(Progress::check_abort()){
+      Rcout << "User abort detected at time: " << time << ", i: " << i << std::endl;
+      return(arma::zeros(2,2));
+    }
     
     if(info){ //print simulation details
       Rcout << "time: " << time << ", i: " << i << std::endl;  
@@ -187,4 +205,11 @@ theta <- c(2.5,5,365*65)
 init_state <- c(1e3,1,0)
   
 sim_firstRxn <- gillespie_direct(theta,init_state,trans,20,TRUE)
+
+#compare speed of first reaction method and direct method
+library(microbenchmark)
+microbenchmark(
+  gillespie_first(theta,c(1e3,5,0),trans,1e3,FALSE),
+  gillespie_direct(theta,c(1e3,5,0),trans,1e3,FALSE),
+  times=500)
 */
