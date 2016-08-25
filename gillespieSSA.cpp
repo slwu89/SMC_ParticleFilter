@@ -35,9 +35,10 @@ arma::vec sir_demography_rate(arma::vec theta, arma::vec current_state){
   return(rates);
 }
 
+
+// define wrappers to allow any user specified rate function to be used in the SSA algorithm
 typedef boost::function<arma::vec(arma::vec,arma::vec)> rate_arguments;
 
-//in reality this function below would be our gillespie_frm function and we just pass the rate function we want into it
 arma::vec rate_wrapper(arma::vec theta, arma::vec current_state, rate_arguments function){
   return(function(theta,current_state));
 }
