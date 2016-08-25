@@ -59,9 +59,7 @@ arma::vec rate_wrapper(arma::vec theta, arma::vec current_state, rate_arguments 
  */
 // [[Rcpp::export]]
 arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans, int t_end, bool info = false){
-  arma::vec out;
-  out = rate_wrapper(theta,init_state,sir_demography_rate);
-  
+
   int n_event = trans.n_rows;
   
   //initialize trace of Monte Carlo simulation
@@ -75,13 +73,13 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
   
   while(time <= t_end){
     
-    if(info){
+    if(info){ //print simulation details
       Rcout << "time: " << time << ", i: " << i << std::endl;  
     }
     
     current_state = trace.row(i-1).t(); //extract state at beginning of time jump
-    
     arma::vec current_rates = rate_wrapper(theta,current_state,sir_demography_rate); //calculate current rates
+    
     arma::vec rand; //create vector of U[0,1]
     rand.randu(n_event);
     
@@ -94,8 +92,8 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
     current_state = current_state + trans.row(first_rxn).t(); //update the current state
     trace.insert_rows(i,current_state.t());
     
-    time = time + tau(first_rxn);
-    i++;
+    time = time + tau(first_rxn); //update time
+    i++; //update iterator
   }
   
   return(trace);
@@ -115,7 +113,7 @@ trans <- matrix(c(1,0,0, #birth into S
 theta <- c(2.5,5,365*65)
 
 #specifc initial state vector
-init_state <- c(1e4,1,0)
+init_state <- c(1e3,1,0)
 
 sim_firstRxn <- gillespie_first(theta,init_state,trans,20,TRUE)
 */
@@ -129,3 +127,47 @@ sim_firstRxn <- gillespie_first(theta,init_state,trans,20,TRUE)
  * t_end: integer value of simulation length
  * rates: function to evaluate rates given current state and theta
  */
+arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat trans, int t_end, bool info = false){
+  
+  int n_event = trans.n_rows;
+  
+  //initialize trace of Monte Carlo simulation
+  arma::mat trace = arma::zeros(1,init_state.n_elem);
+  trace.row(0) = init_state.t();
+  arma::vec current_state;
+  
+  //main simulation loop
+  double time = 0.0;
+  int i = 1;
+  
+  while(time <= t_end){
+    
+    if(info){ //print simulation details
+      Rcout << "time: " << time << ", i: " << i << std::endl;  
+    }
+    
+    current_state = trace.row(i-1).t(); //extract state at beginning of time jump
+    arma::vec current_rates = rate_wrapper(theta,current_state,sir_demography_rate); //calculate current rates
+    
+    double w0 = sum(current_rates); //sum of rate (propensity) functions
+    double tau = 1/w0 * log(1/R::runif(0,1)); //calculate time to next reaction
+    
+    double r_num = R::runif(0,1);
+    double w0_rxn = r_num * w0; //instantaneous event probabilities
+    
+    //decide which event j occured
+    int j = 0;
+    while(sum(current_rates.subvec(0,j)) < w0_rxn){
+      j = j + 1;
+    }
+    
+    current_state = current_state + trans.row(j).t(); //update the current state
+    trace.insert_rows(i,current_state.t());
+    
+    time = time + tau; //update time
+    i++; //update iterator
+  }
+  
+  return(trace);
+}
+  
