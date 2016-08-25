@@ -127,9 +127,8 @@ sim_firstRxn <- gillespie_first(theta,init_state,trans,20,TRUE)
  * t_end: integer value of simulation length
  * rates: function to evaluate rates given current state and theta
  */
+// [[Rcpp::export]]
 arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat trans, int t_end, bool info = false){
-  
-  int n_event = trans.n_rows;
   
   //initialize trace of Monte Carlo simulation
   arma::mat trace = arma::zeros(1,init_state.n_elem);
@@ -158,7 +157,7 @@ arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat tran
     //decide which event j occured
     int j = 0;
     while(sum(current_rates.subvec(0,j)) < w0_rxn){
-      j = j + 1;
+      j++;
     }
     
     current_state = current_state + trans.row(j).t(); //update the current state
@@ -171,3 +170,21 @@ arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat tran
   return(trace);
 }
   
+/***R
+#specify stoichiometry/events
+trans <- matrix(c(1,0,0, #birth into S
+                -1,1,0, #infection from S into I
+                0,-1,1, #recovery from I into R
+                -1,0,0, #death from S
+                0,-1,0, #death from I
+                0,0,-1), #death from R
+                nrow=6,ncol=3,byrow=TRUE)
+  
+#specify theta (R0, infectious duration, lifespan)
+theta <- c(2.5,5,365*65)
+  
+#specifc initial state vector
+init_state <- c(1e3,1,0)
+  
+sim_firstRxn <- gillespie_direct(theta,init_state,trans,20,TRUE)
+*/
