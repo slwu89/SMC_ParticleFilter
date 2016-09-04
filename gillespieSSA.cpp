@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 
 /*
- * sir_rate is function to return event rates based on current system state for SIR model with demography
+ * sir_demography_rate is function to return event rates based on current system state for SIR model with demography
  * theta: vector of parameters
  * current_state: vector of state variables
  */
@@ -38,17 +38,77 @@ arma::vec sir_demography_rate(arma::vec theta, arma::vec current_state){
 }
 
 
+/*
+ * sir_rate is function to return event rates based on current system state for SIR model without demography
+ * theta: vector of parameters
+ * current_state: vector of state variables
+ */
+// [[Rcpp::export]]
+arma::vec sir_rate(arma::vec theta, arma::vec current_state){
+  
+  //define parameters
+  double beta = theta(0) / theta(1);
+  double gamma = 1 / theta(1);
+  
+  //define states
+  int s = current_state(0);
+  int i = current_state(1);
+  int r = current_state(2);
+  int n = s + i + r;
+  
+  //return rates
+  arma::vec rates = arma::zeros(2);
+  rates(0) = beta * s * i/n; //S to I
+  rates(1) = gamma * i; //I to R
+  
+  return(rates);
+}
+
+
+/*
+ * seirs_demograph_rate is a function to return event rates based on current system state for SEIRS model with demography
+ * theta: vector of parameters
+ * current_state: vector of state variables
+ */
+// [[Rcpp::export]]
+arma::vec seirs_demograph_rate(arma::vec theta, arma::vec current_state){
+  
+  //define parameters
+  double beta = theta(0) / theta(2);
+  double tau = 1 / theta(1);
+  double rec = 1 / theta(2);
+  double gamma = 1 / theta(3);
+  double mu = 1 / theta(4);
+  
+  //define states
+  int s = current_state(0);
+  int e = current_state(1);
+  int i = current_state(2);
+  int r = current_state(3);
+  int n = s + e + i + r;
+  
+  //return rates
+  arma::vec rates = arma::zeros(9);
+  rates(0) = mu * n; //birth into S
+  rates(1) = beta * s * i/n; //S to E
+  rates(2) = tau * e; //E to I
+  rates(3) = rec * i; //I to R
+  rates(4) = gamma * r; //R to S
+  rates(5) = mu * s;
+  rates(6) = mu * e;
+  rates(7) = mu * i;
+  rates(8) = mu * r;
+  
+  return(rates);
+}
+
+
 // define wrappers to allow any user specified rate function to be used in the SSA algorithm
 typedef boost::function<arma::vec(arma::vec,arma::vec)> rate_arguments;
 
 arma::vec rate_wrapper(arma::vec theta, arma::vec current_state, rate_arguments function){
   return(function(theta,current_state));
 }
-
-// // [[Rcpp::export]]
-// void test(arma::vec theta, arma::vec init_state){
-//   Rcout << "testing passing function" << rate_wrapper(theta,init_state,sir_demography_rate) << std::endl;
-// }
 
 
 /*
