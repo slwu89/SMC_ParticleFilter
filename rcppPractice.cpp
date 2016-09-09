@@ -415,3 +415,169 @@ arma::mat insertRow(){
 insertRow()
 #looks like you insert it into the empty space.
 */
+
+
+// testing rate calculations with next reaction method's dependency graph
+// depend_graph is the boolean matrix of dependencies
+// j_event is which event occured
+// [[Rcpp::export]]
+arma::umat next_rate(arma::umat input){
+  return(input);
+}
+/***R
+next_rate(matrix(c(T,F,T,F),2,2))
+*/
+
+
+//individual rate functions for each event/reaction
+double s_to_e(arma::vec theta, arma::vec current_state){
+  double beta = theta(0) / theta(2);
+  int s = current_state(0);
+  int i = current_state(2);
+  int n = sum(current_state);
+  double out = beta * s * i/n;
+  return(out);
+}
+
+double e_to_i(arma::vec theta, arma::vec current_state){
+  double tau = 1 / theta(1);
+  int e = current_state(1);
+  double out = tau * e;
+  return(out);
+}
+
+double i_to_r(arma::vec theta, arma::vec current_state){
+  double rec = 1 / theta(2);
+  int i = current_state(2);
+  double out = rec * i;
+  return(out);
+}
+
+double r_to_s(arma::vec theta, arma::vec current_state){
+  double gamma = 1 / theta(3);
+  int r = current_state(3);
+  double out = gamma * r;
+  return(out);
+}
+
+double birth_s(arma::vec theta, arma::vec current_state){
+  double mu = 1 / theta(4);
+  int n = sum(current_state);
+  double out = mu * n;
+  return(out);
+}
+
+double death_s(arma::vec theta, arma::vec current_state){
+  double mu = 1 / theta(4);
+  int s = current_state(0);
+  double out = mu * s;
+  return(out);
+}
+
+double death_e(arma::vec theta, arma::vec current_state){
+  double mu = 1 / theta(4);
+  int e = current_state(1);
+  double out = mu * e;
+  return(out);
+}
+
+double death_i(arma::vec theta, arma::vec current_state){
+  double mu = 1 / theta(4);
+  int i = current_state(2);
+  double out = mu * i;
+  return(out);
+}
+
+double death_r(arma::vec theta, arma::vec current_state){
+  double mu = 1 / theta(4);
+  int r = current_state(3);
+  double out = mu * r;
+  return(out);
+}
+
+// j_event is the event that just happened (remember to fire that j_event, then update current_state, then call this function)
+// [[Rcpp::export]]
+arma::vec next_rate_dynamic(arma::vec current_rate, arma::vec theta, arma::vec current_state, LogicalMatrix depend, int j_event){
+  
+  arma::vec updated_rate = current_rate;
+  
+  LogicalVector j_update = depend.row(j_event); //boolean vector of which rates to update
+  
+  for(int i=0; i<j_update.length(); i++){ //iterate through j_update to choose which rates to update
+    
+    if(j_update[i]==true){ 
+      if(i==0){ //S to E
+        updated_rate(i) = s_to_e(theta,current_state);
+      }
+      if(i==1){ //E to I
+        updated_rate(i) = e_to_i(theta,current_state);
+      } 
+      if(i==2){ //I to R
+        updated_rate(i) = i_to_r(theta,current_state);
+      } 
+      if(i==3){ //R to S
+        updated_rate(i) = r_to_s(theta,current_state);
+      } 
+      if(i==4){ //birth S
+        updated_rate(i) = birth_s(theta,current_state);
+      } 
+      if(i==5){ //death S
+        updated_rate(i) = death_s(theta,current_state);
+      } 
+      if(i==6){ //death E
+        updated_rate(i) = death_e(theta,current_state);
+      } 
+      if(i==7){ //death I
+        updated_rate(i) = death_i(theta,current_state);
+      } 
+      if(i==8){ //death R
+        updated_rate(i) = death_r(theta,current_state);
+      }
+    } //end if
+    
+  } //end loop
+  
+  return(updated_rate);
+}
+
+/***R
+message("TESTING RATE UPDATES FOR SERIS WITH DEMOGRAPHY: NEXT REACTION METHOD")
+#SEIRS with demography
+trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
+                      0,-1,1,0, #progression from E to I
+                      0,0,-1,1, #recovery from I to R
+                      1,0,0,-1, #loss of immunity from R to S
+                      1,0,0,0, #birth to S
+                      -1,0,0,0, #death from S
+                      0,-1,0,0, #death from E
+                      0,0,-1,0, #death from I
+                      0,0,0,-1), #death from R
+                      nrow=9,ncol=4,byrow=TRUE)
+  
+#specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
+theta <- c(2.5,2,3,365,365*65)
+  
+#specify initial state vector
+current_state <- c(500,40,20,5)
+  
+#specify dependency graph
+depend <- matrix(c(F,T,T,T,T,T,T,T,T, #S to E
+                         T,F,F,F,F,F,T,F,F, #E to I
+                         F,T,F,F,F,F,F,T,F, #I to R
+                         F,F,T,F,F,F,F,F,T, #R to S
+                         F,F,F,F,F,T,T,T,T, #birth to S
+                         T,F,F,T,F,F,F,F,F, #death from S
+                         T,T,F,F,F,F,F,F,F, #death from E
+                         F,T,T,F,F,F,F,F,F, #death from I
+                         F,F,T,T,F,F,F,F,F), #death from R
+                         nrow=9,ncol=9,byrow=TRUE)
+  
+#specify which event occured (0 indexed!)
+j_event <- 8
+
+current_rate <- rep(0.5,9)
+
+next_rate_dynamic(current_rate,theta,current_state,depend,j_event)
+*/
+
+
