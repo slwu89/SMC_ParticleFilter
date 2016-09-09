@@ -473,25 +473,41 @@ arma::mat gillespie_next(arma::vec theta, arma::vec init_state, arma::mat trans,
     
     current_state = trace.row(i-1).t(); //extract state at beginning of time jump
     
+    Rcout << "current_state when extracted at beginning of Markov jump: " << std::endl << current_state << std::endl;
+    
     if(i == 1){
+      Rcout << "i == 1 eval true!" << std::endl;
       current_rates = rate_wrapper(theta,current_state,seirs_demography_rate); //calculate initial rates   
     } else {
+      Rcout << "i == 1 eval false!" << std::endl;
       current_rates = update_rates_seirs_demography(theta,current_rates,current_state,depend,j_event); //update rates based on dependency graph
     }
     
-    arma::vec rand; //create vector of U[0,1]
-    rand.randu(n_event);
+    Rcout << "current_rates: " << std::endl << current_rates << std::endl; //DEBUG
     
     arma::vec tau(n_event); //calculate vector of times to next event
+    Rcout << "tau" << std::endl << tau << std::endl;
     for(int j=0; j<n_event; j++){
-      tau(j) = (-1 / current_rates(j)) * log(rand(j));
+      tau(j) = (-1 / current_rates(j)) * log(R::runif(0,1));
     }
     
     j_event = tau.index_min(); //fire j_event
+    Rcout << "j_event: " << j_event << std::endl; //DEBUG
     current_state = current_state + trans.row(j_event).t(); //update the current state
+    Rcout << "current_state when updated at end of Markov jump: " << std::endl << current_state << std::endl;
     trace.insert_rows(i,current_state.t());
     
     time = time + tau(j_event); //update time
+    
+    //DEBUGGING
+    if(time < 0){
+      Rcout << "time: " << time << ", breaking out of loop!" << std::endl;
+      break;
+    }
+    Rcout << "THIS ITERATION: " << i << ", IS OVER!!!! GOING TO NEXT ITERATION IN LOOOOOOOOOOOP!!!!!!!!!!!!" << std::endl;
+    Rcout << "\n";
+    Rcout << "\n";
+    
     i++; //update iterator
   }
   

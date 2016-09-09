@@ -573,7 +573,7 @@ depend <- matrix(c(F,T,T,T,T,T,T,T,T, #S to E
                          nrow=9,ncol=9,byrow=TRUE)
   
 #specify which event occured (0 indexed!)
-j_event <- 8
+j_event <- 0
 
 current_rate <- rep(0.5,9)
 
