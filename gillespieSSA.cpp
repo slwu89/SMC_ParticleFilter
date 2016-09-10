@@ -8,6 +8,17 @@ using namespace Rcpp;
 
 
 /*
+ * This file gives functions to run exact discrete event (integer valued) simulations of stochastic processes.
+ * These processes are three variants on the Gillespie algorithm (SSAs):
+ * Gillespie's Direct Method
+ * Gillespie's First Reaction Method
+ * Gibson & Bruck's Next Reaction Method
+ * 
+ * You will need to install Rcpp, RcppArmadillo, RcppProgress, BH, and have a working C++ compiler to use them.
+ */
+
+
+/*
  * sir_demography_rate is function to return event rates based on current system state for SIR model with demography
  * theta: vector of parameters
  * current_state: vector of state variables
