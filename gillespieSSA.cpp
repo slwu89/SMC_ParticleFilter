@@ -201,7 +201,7 @@ trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
                   nrow=9,ncol=4,byrow=TRUE)
 
 #specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
-theta_seirs <- c(2.5,2,3,365,365*65)
+theta_seirs <- c(5,2,3,365,365*65)
 
 #specify initial state vector
 init_state_seirs <- c(1e3,1,0,0)
@@ -302,7 +302,7 @@ trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
                       nrow=9,ncol=4,byrow=TRUE)
 
 #specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
-theta_seirs <- c(2.5,2,3,365,365*65)
+theta_seirs <- c(5,2,3,365,365*65)
 
 #specify initial state vector
 init_state_seirs <- c(1e3,1,0,0)
@@ -432,6 +432,7 @@ arma::vec update_rates_seirs_demography(arma::vec theta, arma::vec current_rate,
   return(updated_rate);
 }
 
+
 /*
  * gillespie_next is a function to simulate a realization of a continuous time Markov process via the next reaction method
  * theta: vector of parameters
@@ -510,8 +511,8 @@ trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
                       nrow=9,ncol=4,byrow=TRUE)
   
 #specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
-theta_seirs <- c(2.5,2,3,365,365*65)
-  
+theta_seirs <- c(5,2,3,365,365*65)
+
 #specify initial state vector
 init_state_seirs <- c(1e3,1,0,0)
   
@@ -539,11 +540,17 @@ matplot(sim_direct,type="l",ylab="",main="Direct Method")
 matplot(sim_nextRxn,type="l",ylab="",main="Next Reaction Method")
 par(mfrow=c(1,1))
 
+#plot dependency graph
+library(igraph)
+depend_seirs_graph <- graph_from_adjacency_matrix(depend_seirs*1)
+V(depend_seirs_graph)$name <- c("S->E","E->I","I->R","R->S","->S","S->","E->","I->","R->")
+plot(depend_seirs_graph)
+
 #benchmarking flavors of Gillespie SSAs
 library(microbenchmark)
 microbenchmark(
   gillespie_first(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
   gillespie_direct(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
   gillespie_next(theta_seirs,init_state_seirs,trans_seirs,depend_seirs,100,FALSE),
-times=1e3)
+times=500)
 */
