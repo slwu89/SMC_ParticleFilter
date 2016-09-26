@@ -2,6 +2,7 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppProgress)]]
 // [[Rcpp::depends(BH)]]
+#include <vector>
 #include <boost/function.hpp>
 #include <progress.hpp>
 #include <RcppArmadilloExtensions/sample.h>
@@ -581,3 +582,53 @@ next_rate_dynamic(current_rate,theta,current_state,depend,j_event)
 */
 
 
+// TEMPORAL GILLESPIE ALGORITHM STUFFS
+// [[Rcpp::export]]
+List testvector(NumericMatrix input){
+  std::vector<NumericMatrix> test(3); 
+  for(int i=0; i<3; i++){
+    test[i] = input;
+  }
+  return(List::create(Named("out")=test));
+} 
+
+// [[Rcpp::export]]
+List testvector2(NumericMatrix in1, NumericMatrix in2){
+  std::vector<NumericMatrix> test(2);
+  test[0] = in1;
+  test[1] = in2;
+  return(List::create(Named("out")=test));
+}
+
+//define the node_tuple thingy to tell the state of node i and node j
+struct node_tuple {int i; int j; char i_state; char j_state;};
+typedef std::vector<node_tuple> node_tuple_list;
+
+
+// [[Rcpp::export]]
+List make_tuples(){
+  node_tuple_list out(2);
+  node_tuple out_1 = {1,3,'s','i'};
+  node_tuple out_2 = {2,4,'s','s'};
+  out[0] = out_1;
+  out[1] = out_2;
+  bool hi = out[1].j_state=='f'; //testing character comparisons
+  Rcout << hi << std::endl;
+  return(List::create(Named("out")=out[1].j_state));
+  // return(List::create(Named("out")=out));
+}
+
+// [[Rcpp::export]]
+List vec_test(){
+  std::vector<double> hi(3);
+  hi[0] = 1.2324;
+  hi[1] = 23.453;
+  hi[2] = 53.342;
+  return(List::create(Named("out")=hi));
+}
+
+/***R
+testvector(matrix(runif(4),2,2))
+
+testvector2(in1=matrix(runif(4),2,2),in2=matrix(runif(9),3,3))
+*/

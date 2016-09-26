@@ -162,7 +162,7 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
     arma::vec current_rates = rate_wrapper(theta,current_state,seirs_demography_rate); //calculate current rates
     
     arma::vec rand; //create vector of U[0,1]
-    rand.randu(n_event);
+    rand = as<arma::vec>(runif(n_event));
     
     arma::vec tau(n_event); //calculate vector of times to next event
     for(int j=0; j<n_event; j++){
@@ -558,10 +558,10 @@ V(depend_seirs_graph)$name <- c("S->E","E->I","I->R","R->S","->S","S->","E->","I
 plot(depend_seirs_graph)
 
 #benchmarking flavors of Gillespie SSAs
-library(microbenchmark)
-microbenchmark(
-  gillespie_first(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
-  gillespie_direct(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
-  gillespie_next(theta_seirs,init_state_seirs,trans_seirs,depend_seirs,100,FALSE),
-times=500)
+# library(microbenchmark)
+# microbenchmark(
+#   gillespie_first(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
+#   gillespie_direct(theta_seirs,init_state_seirs,trans_seirs,100,FALSE),
+#   gillespie_next(theta_seirs,init_state_seirs,trans_seirs,depend_seirs,100,FALSE),
+# times=500)
 */
