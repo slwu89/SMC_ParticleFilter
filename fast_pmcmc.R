@@ -279,7 +279,7 @@ particle_filter <- function(model,theta,init_state,data,n_particles,progress=TRU
 }
 
 #initialize variables
-prev_dat <- read.csv("C:/Users/WuS/Dropbox/Academics/Spring 2015/PH252B/Week 9/SIRPrevData.csv")
+prev_dat <- read.csv("/Users/slwu89/Dropbox/Academics/Spring 2015/PH252B/Week 9/SIRPrevData.csv")
 init_theta_sir <- c(R0=1.5,inf_dur=5)
 init_state_sir <- c(S=999,I=1,R=0)
 
@@ -293,13 +293,13 @@ init_state_tdc_seirwl <- c(S=279,E=0,I=2,R=3,W=0,L=0)
 SEIRL_stoch(init_theta_seirl,init_state_tdc_seirl,times=1:59)
 SEIRWL_stoch(init_theta_seirwl,init_state_tdc_seirwl,times=1:59)
 
-tdc_dat <- read.csv("C:/Users/WuS/Dropbox/Academics/Spring 2015/PH252B/Week 10/FluTdCIncData.csv")
+tdc_dat <- read.csv("/Users/slwu89/Dropbox/Academics/Spring 2015/PH252B/Week 10/FluTdCIncData.csv")
 names(tdc_dat) <- c("time","I")
 
 #register parallel backend
-nodes <- detectCores()
-cl <- makeCluster(nodes)
-registerDoSNOW(cl)
+nodes <- detectCores()-2
+cl <- parallel::makeForkCluster(nodes)
+registerDoParallel(cl)
 
 system.time(particle_filter(model=SEIRL_stoch,theta=init_theta_seirl,init_state=init_state_tdc_seirl,data=tdc_dat,n_particles=20,progress=TRUE,vis=FALSE))
 system.time(particle_filter(model=SEIRWL_stoch,theta=init_theta_seirwl,init_state=init_state_tdc_seirwl,data=tdc_dat,n_particles=20,progress=TRUE,vis=FALSE))

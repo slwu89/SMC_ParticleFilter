@@ -263,11 +263,11 @@ prev_dat <- as.matrix(prev_dat)
 init_theta_sir <- c(R0=2,inf_dur=5)
 init_state_sir <- c(S=999,I=1,R=0)
   
-SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,times=1:37)
-
-set.seed(123)
-system.time(pf_out <- particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_sir,
-                          data=prev_dat,n_particles=100,progress=TRUE))
+# SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,times=1:37)
+# 
+# set.seed(123)
+# system.time(pf_out <- particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_sir,
+#                           data=prev_dat,n_particles=100,progress=TRUE))
 
 
 */

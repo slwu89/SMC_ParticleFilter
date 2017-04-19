@@ -163,14 +163,14 @@ particle_filter <- function(model,theta,init_state,data,n_particles,progress=TRU
 ######################################################################
 
 #initial parameters and state variables
-init_theta_seir <- c(R0=2,lat_dur=1.5,inf_dur=3)
+init_theta_seir <- c(R0=1.55,lat_dur=2,inf_dur=4.25)
 init_state_seir <- c(S=369,E=0,I=1,R=0)
 
 #test the stochastic SEIR model
 SEIR_stoch(theta=init_theta_seir,init_state=init_state_seir,1:50)
 
 #register parallel backend
-cl <- parallel::makeCluster(spec=detectCores(),type="PSOCK")
+cl <- parallel::makeCluster(spec=detectCores(),type="FORK")
 registerDoParallel(cl)
 
 #run the particle filter (adjust the number of particles as needed)
