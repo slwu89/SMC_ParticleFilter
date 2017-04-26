@@ -159,7 +159,7 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
     }
     
     current_state = trace.row(i-1).t(); //extract state at beginning of time jump
-    arma::vec current_rates = rate_wrapper(theta,current_state,seirs_demography_rate); //calculate current rates
+    arma::vec current_rates = rate_wrapper(theta,current_state,sir_rate); //calculate current rates
     
     arma::vec rand; //create vector of U[0,1]
     rand = as<arma::vec>(runif(n_event));
@@ -199,25 +199,25 @@ arma::mat gillespie_first(arma::vec theta, arma::vec init_state, arma::mat trans
 #
 # sim_firstRxn <- gillespie_first(theta_sir,init_state_sir,trans_sir,20,TRUE)
 
-#SEIRS with demography
-trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
-                  0,-1,1,0, #progression from E to I
-                  0,0,-1,1, #recovery from I to R
-                  1,0,0,-1, #loss of immunity from R to S
-                  1,0,0,0, #birth to S
-                  -1,0,0,0, #death from S
-                  0,-1,0,0, #death from E
-                  0,0,-1,0, #death from I
-                  0,0,0,-1), #death from R
-                  nrow=9,ncol=4,byrow=TRUE)
-
-#specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
-theta_seirs <- c(5,2,3,365,365*65)
-
-#specify initial state vector
-init_state_seirs <- c(1e3,1,0,0)
-
-sim_firstRxn <- gillespie_first(theta_seirs,init_state_seirs,trans_seirs,20,TRUE)
+# #SEIRS with demography
+# trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
+#                   0,-1,1,0, #progression from E to I
+#                   0,0,-1,1, #recovery from I to R
+#                   1,0,0,-1, #loss of immunity from R to S
+#                   1,0,0,0, #birth to S
+#                   -1,0,0,0, #death from S
+#                   0,-1,0,0, #death from E
+#                   0,0,-1,0, #death from I
+#                   0,0,0,-1), #death from R
+#                   nrow=9,ncol=4,byrow=TRUE)
+# 
+# #specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
+# theta_seirs <- c(5,2,3,365,365*65)
+# 
+# #specify initial state vector
+# init_state_seirs <- c(1e3,1,0,0)
+# 
+# sim_firstRxn <- gillespie_first(theta_seirs,init_state_seirs,trans_seirs,20,TRUE)
 */
 
 
@@ -256,7 +256,7 @@ arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat tran
     }
     
     current_state = trace.row(i-1).t(); //extract state at beginning of time jump
-    arma::vec current_rates = rate_wrapper(theta,current_state,seirs_demography_rate); //calculate current rates
+    arma::vec current_rates = rate_wrapper(theta,current_state,sir_rate); //calculate current rates
     
     double w0 = sum(current_rates); //sum of rate (propensity) functions
     double tau = 1/w0 * log(1/R::runif(0,1)); //calculate time to next reaction
@@ -299,26 +299,26 @@ arma::mat gillespie_direct(arma::vec theta, arma::vec init_state, arma::mat tran
 #   
 # sim_direct <- gillespie_direct(theta_sir,init_state_sir,trans_sir,20,TRUE)
 
-#specify stoichiometry/events
-#SEIRS with demography
-trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
-                        0,-1,1,0, #progression from E to I
-                        0,0,-1,1, #recovery from I to R
-                        1,0,0,-1, #loss of immunity from R to S
-                        1,0,0,0, #birth to S
-                        -1,0,0,0, #death from S
-                        0,-1,0,0, #death from E
-                        0,0,-1,0, #death from I
-                        0,0,0,-1), #death from R
-                      nrow=9,ncol=4,byrow=TRUE)
-
-#specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
-theta_seirs <- c(5,2,3,365,365*65)
-
-#specify initial state vector
-init_state_seirs <- c(1e3,1,0,0)
-
-sim_direct <- gillespie_direct(theta_seirs,init_state_seirs,trans_seirs,20,TRUE)
+# #specify stoichiometry/events
+# #SEIRS with demography
+# trans_seirs <- matrix(c(-1,1,0,0, #infection from S to E
+#                         0,-1,1,0, #progression from E to I
+#                         0,0,-1,1, #recovery from I to R
+#                         1,0,0,-1, #loss of immunity from R to S
+#                         1,0,0,0, #birth to S
+#                         -1,0,0,0, #death from S
+#                         0,-1,0,0, #death from E
+#                         0,0,-1,0, #death from I
+#                         0,0,0,-1), #death from R
+#                       nrow=9,ncol=4,byrow=TRUE)
+# 
+# #specify theta (R0, latent duration, infectious duration, immune duration, lifespan)
+# theta_seirs <- c(5,2,3,365,365*65)
+# 
+# #specify initial state vector
+# init_state_seirs <- c(1e3,1,0,0)
+# 
+# sim_direct <- gillespie_direct(theta_seirs,init_state_seirs,trans_seirs,20,TRUE)
 */
 
 

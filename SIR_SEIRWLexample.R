@@ -55,12 +55,25 @@ SIR_stoch <- function(theta,init_state,times){
 }
 
 #initial parameters and state variables
-init_theta_sir <- c(R0=1.5,inf_dur=5)
-init_state_sir <- c(S=999,I=1,R=0)
+init_theta_sir <- c(R0=1.75,inf_dur=5)
+init_state_sir <- c(S=990,I=10,R=0)
 
 #test the stochastic SIR model
-SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,1:59)
 
+SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,1:59)
+trans_sir <- matrix(c(
+                  -1,1,0, #infection from S into I
+                  0,-1,1), #death from R
+                nrow=2,ncol=3,byrow=TRUE)
+
+gillespie_first(theta = init_theta_sir,init_state = init_state_sir,trans = trans_sir,t_end = 59,info = FALSE)
+
+gillespie_direct(theta = init_theta_sir,init_state = init_state_sir,trans = trans_sir,t_end = 59,info = FALSE)
+
+microbenchmark(SIR_stoch(theta=init_theta_sir,init_state=init_state_sir,1:59),
+               gillespie_first(theta = init_theta_sir,init_state = init_state_sir,trans = trans_sir,t_end = 59,info = FALSE),
+               gillespie_direct(theta = init_theta_sir,init_state = init_state_sir,trans = trans_sir,t_end = 59,info = FALSE)
+)
 
 ###SEIRWL Model (Erlang-distributed waiting times)###
 #####################################################
