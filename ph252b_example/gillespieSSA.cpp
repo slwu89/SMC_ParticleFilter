@@ -10,12 +10,12 @@ using namespace Rcpp;
 
 /*
 * This file gives functions to run exact discrete event (integer valued) simulations of stochastic processes.
-* These processes are three variants on the Gillespie algorithm (SSAs):
 * Gillespie's Direct Method
-* Gillespie's First Reaction Method
-* Gibson & Bruck's Next Reaction Method
 * 
-* You will need to install Rcpp, RcppArmadillo, RcppProgress, BH, and have a working C++ compiler to use them.
+* Sean Wu
+* April 20, 2017
+* 
+* You will need to install Rcpp, RcppGSL, and have a working C++ compiler to use it.
 */
 
 /*

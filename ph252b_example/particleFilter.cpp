@@ -185,156 +185,36 @@ Rcpp::List particleFilter(Function model, NumericVector theta, NumericVector ini
     }
     
     // update filtered trajectories of particles after bootstrap resampling
-    for(int i=0; i<nParticles; i++){
-      for(int ii=0; i<particleTrajectory.size(); ii++){
-        particleTrajectory[ii][i] = particleTrajectory[ii][indexResample[i]];
+    for(int i=0; i<particleTrajectory.size(); i++){
+      for(int ii=0; ii<indexResample.size(); ii++){
+        particleTrajectory[i][ii] = particleTrajectory[i][indexResample[ii]];
       }
     }
+    
     // update current state of particles after bootstrap resampling
-    for(int i=0; i<nParticles; i++){ 
+    for(int i=0; i<particleCurrentState.size(); i++){
       particleCurrentState[i] = particleCurrentState[indexResample[i]];
     }
 
     // propagate particles over particleCurrentState
     particleCurrentStateDefn particlesPropagateState(nParticles); // states for each of the j particles after being propagated to next time point
     NumericVector propagateWeight(nParticles); // weights for each of the j particles after being propagated to next time point
-  
-  for(int j=0; j<nParticles; j++){ //run model for each particle
-    
-    // propagate particle trajectories over current time step
-    NumericVector particleCurrentStateJ = particleCurrentState[j];
-    Rcpp::DataFrame particleUpdateJ = model(theta, particleCurrentStateJ, times);
-    
-   
-  }
-  
+
+    // propagate particles
+    for(int i=0; i<nParticles; i++){
+      
+    }
     
   }
   
   return(List::create(
       _["particleCurrentState"] = particleCurrentState,
       _["particleTrajectory"] = particleTrajectory
+      // _["indexResample"] = indexResample
   ));
 }
 
-// [[Rcpp::export]]
-List particle_filter(Function model, arma::vec theta, arma::vec init_state, NumericMatrix data, int n_particles, bool progress){
-
-  //initialize system
-  int n_iter = data.nrow(); //number of iterations for main particle filter
-  NumericVector time_points = data(_,0); //extract time points to run model over
-  double loglike = 0.0;
-  arma::mat particle_current_state = arma::zeros(n_particles,init_state.n_elem);
-  particle_current_state.each_row() = init_state.t();
-  arma::cube particle_traj = makeCube(n_iter+1,n_particles,init_state.t());
-  double init_weight = 1 / Rcpp::as<double>(wrap(n_particles));
-  NumericVector particle_weight = NumericVector(n_particles,init_weight);
-  IntegerVector n_particles_vec = seq_len(n_particles)-1; //0:n_particles needed for armadillo bootstrap resample
-
-  //progress bar
-  Progress p(n_iter,progress);
-
-  //run the particle filter
-  for(int i=0; i<n_iter; i++){
-
-    //check for user abort
-    if(Progress::check_abort()){
-      Rcout << "User abort detected at step " << i << std::endl;
-      return(List::create(Named("margLogLike")=R_NegInf,Named("trajectory")=R_NilValue,Named("traj_weight")=R_NilValue));
-    }
-
-    //run inner loop only over single timestep indexed by times
-    NumericVector times(Dimension(2));
-    int begin;
-    int end;
-    if(i == 0){
-      begin = 0;
-    } else {
-      begin = time_points(i-1);
-    }
-    end = time_points(i);
-    times(0) = begin;
-    times(1) = end;
-    double data_point = data(i,1); //current observed data point
-
-    //resample particles
-    IntegerVector index_resampled;
-    IntegerVector na_weight = whichNA(particle_weight); //find particles with NA weight
-    particle_weight = setZeroIndex(particle_weight,na_weight); //replace NA weight particles with 0
-    if(!all(particle_weight==0).is_true()){
-      index_resampled = RcppArmadillo::sample(n_particles_vec,n_particles,true,particle_weight);
-    } else {
-      Rcout << "All particles depleted at step " << i << " of SMC. Return margLogLike = -Inf for theta: " << theta << std::endl;
-      return(List::create(Named("margLogLike")=R_NegInf,Named("trajectory")=R_NilValue,Named("traj_weight")=R_NilValue));
-    }
-
-    //update particles after resampling
-    particle_traj = subsetCube(particle_traj,index_resampled);
-    particle_current_state = subsetMat(particle_current_state,index_resampled);
-
-    //propagate particles over particle_current_state
-    arma::mat propagate_model_point = arma::zeros(n_particles,init_state.n_elem); //states for each of the j particles after being propagated to next time point
-    NumericVector propagate_weight = NumericVector(n_particles); //weights for each of the j particles after being propagated to next time point
-
-    for(int j=0; j<n_particles; j++){ //run model for each particle
-
-      //run model over current time step
-      arma::rowvec current_state_j = particle_current_state.row(j);
-      Rcpp::DataFrame particle_j_out = model(theta,current_state_j,times);
-
-      //extract trajectories at latest time step
-      IntegerVector j_times = particle_j_out["time"];
-      NumericVector j_S = particle_j_out["S"];
-      NumericVector j_E1 = particle_j_out["E1"];
-      NumericVector j_E2 = particle_j_out["E2"];
-      NumericVector j_I1 = particle_j_out["I1"];
-      NumericVector j_I2 = particle_j_out["I2"];
-      NumericVector j_R1 = particle_j_out["R1"];
-      NumericVector j_R2 = particle_j_out["R2"];
-      NumericVector j_R3 = particle_j_out["R3"];
-      NumericVector j_R4 = particle_j_out["R4"];
-      NumericVector j_L = particle_j_out["L"];
-      propagate_model_point(j,0) = j_S(j_S.size()-1);
-      propagate_model_point(j,1) = j_E1(j_E1.size()-1);
-      propagate_model_point(j,2) = j_E2(j_E2.size()-1);
-      propagate_model_point(j,3) = j_I1(j_I1.size()-1);
-      propagate_model_point(j,4) = j_I2(j_I2.size()-1);
-      propagate_model_point(j,5) = j_R1(j_R1.size()-1);
-      propagate_model_point(j,6) = j_R2(j_R2.size()-1);
-      propagate_model_point(j,7) = j_R3(j_R3.size()-1);
-      propagate_model_point(j,8) = j_R4(j_R4.size()-1);
-      propagate_model_point(j,9) = j_L(j_L.size()-1);
-
-      //compute particle weight
-      double f = 1.0/theta["latDur"]
-      double rho = 0.72
-      double lambda = f*rho*(propagate_model_point(j,1) + propagate_model_point(j,2));
-      double j_weight = R::dpois(data_point,lambda,false); //incidence is modeled as a Poisson process
-
-      //collect parallel trajectories of each particle
-      propagate_weight(j) = j_weight;
-      particle_traj(i+1,0,j) = j_S(j_S.size()-1);
-      particle_traj(i+1,1,j) = j_I(j_I.size()-1);
-      particle_traj(i+1,2,j) = j_R(j_R.size()-1);
-    }
-
-    //collect parallel trajectories of each particle
-    particle_current_state = propagate_model_point;
-    particle_weight = propagate_weight;
-
-    //update marginal log-likelihood of theta
-    loglike += log(mean(particle_weight));
-
-    //advance progress bar
-    p.increment();
-
-  }
-
-  //return estimated marginal log likelihood, particle trajectory, and particle weights
-  return(List::create(Named("loglike")=loglike,Named("trajectory")=particle_traj,Named("traj_weight")=particle_weight/sum(particle_weight)));
-}
-
 /***R
-out = particleFilter(model = function(){1},theta = 1,initState = c(1,2,3),data = matrix(rnorm(9)),nParticles = 5,progress = FALSE,seed = 42)
+out = particleFilter(model = function(){1},theta = c(1),initState = c(1,10,100),data = matrix(rnorm(9)),nParticles = 5,progress = FALSE,seed = 42)
 
 */
