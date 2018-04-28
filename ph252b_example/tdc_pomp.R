@@ -8,6 +8,9 @@
 
 library(pomp)
 
+dir <- "/Users/slwu89/Desktop/git/StochasticInference/"
+FluTdC1971 <- read.csv2(paste0(dir,"FluTdCIncData.csv"),header = T,sep = ",")
+
 ################################################################################
 #   SEIRWL (window of re-infection)
 ################################################################################
@@ -20,7 +23,7 @@ SEIRWL_ode_c <- Csnippet("
   /* derived parameters */
   double beta = R0 / inf_d;         /* effective contact rate */
   double f = 1 / lat_d;
-  double r = 1 / inf_dur;
+  double r = 1 / inf_d;
   double gamma = 1 /imm_d;
   double tau = 1 / win_d;
 
@@ -54,28 +57,28 @@ SEIRWL_stochastic_c <- Csnippet("
   /* derived parameters */
   double beta = R0 / inf_d;         /* effective contact rate */
   double f = 1 / lat_d;
-  double r = 1 / inf_dur;
+  double r = 1 / inf_d;
   double gamma = 1 /imm_d;
   double tau = 1 / win_d;
-  
+
   /* total population size */  
   double N = S + E + I + R + W + L;
 
   /* rates of each event occuring */
-  rates[0] = (beta * I / N) * S;    /* S -> E: force of infection on susceptibles */
-  rates[1] = f * E;                 /* E -> I: progression to infectiousness */
-  rates[2] = r * I;                 /* I -> R: recovery */
-  rates[3] = gamma * R;             /* R -> W: progression to re-infectiousness */
-  rates[4] = tau * W;               /* W -> L: permanant recovery */
-  rates[5] = (beta * I / N) * W;    /* W -> E: force of infection on window-of-reinfection */
+  rates[0] = (beta * I / N) * S;    /* force of infection on susceptibles */
+  rates[1] = f * E;                 /* progression to infectiousness */
+  rates[2] = r * I;                 /* recovery */
+  rates[3] = gamma * R;             /* progression to re-infectiousness */
+  rates[4] = tau * W;               /* permanant recovery */
+  rates[5] = (beta * I / N) * W;    /* force of infection on window-of-reinfection */
 
   /* sample events */
-  reulermultinom(1, S, &rate[0], dt, &dX[0]); /* S -> E */
-  reulermultinom(1, E, &rate[1], dt, &dX[1]); /* E -> I */
-  reulermultinom(1, I, &rate[2], dt, &dX[2]); /* I -> R */
-  reulermultinom(1, R, &rate[3], dt, &dX[3]); /* R -> W */
-  reulermultinom(1, W, &rate[4], dt, &dX[4]); /* W -> L */
-  reulermultinom(1, W, &rate[5], dt, &dX[5]); /* W -> E */
+  reulermultinom(1, S, &rates[0], dt, &dX[0]); /* S -> E */
+  reulermultinom(1, E, &rates[1], dt, &dX[1]); /* E -> I */
+  reulermultinom(1, I, &rates[2], dt, &dX[2]); /* I -> R */
+  reulermultinom(1, R, &rates[3], dt, &dX[3]); /* R -> W */
+  reulermultinom(2, W, &rates[4], dt, &dX[4]); /* W -> L */
+  // reulermultinom(1, W, &rates[5], dt, &dX[5]); /* W -> E */
 
   /* update state variables */
   S += -dX[0];
@@ -89,12 +92,12 @@ SEIRWL_stochastic_c <- Csnippet("
 
 # stochastic measurement model
 SEIRWL_rmeasurement_c <- Csnippet("
-  obs = rpois(rho * Inc > 0 ? rho * Inc : 0);
+  inc = rpois(rho * I > 0 ? rho * I : 0);
 ")
 
 # point likelihood 
 SEIRWL_dmeasurement_c <- Csnippet("
-  lik = dpois(obs, rho * Inc > 0 ? rho * Inc : 0, give_log);
+  lik = dpois(inc, rho * I > 0 ? rho * I : 0, give_log);
 ")
 
 # transform parameters to unconstrained space
@@ -128,30 +131,60 @@ SEIRWL_prior_c <- Csnippet("
   lik = give_log ? lik: exp(lik);
 ")
 
+# initial state of hidden process
+SEIRWL_initializer_c <- Csnippet("
+  S = 279;
+  E = 0;
+  I = 1;
+  R = 3;
+  W = 0;
+  L = 0;
+")
+
 # pomp object
-SEIRWL_pomp <- pomp(data = FluTdC1971[, c("time", "obs")],
+SEIRWL_pomp <- pomp(data = FluTdC1971[, c("time", "inc")],
                    rprocess = euler.sim(step.fun = SEIRWL_stochastic_c,
-                                        delta.t = 0.1),
+                                        delta.t = 0.05),
                    rmeasure = SEIRWL_rmeasurement_c,
                    dmeasure = SEIRWL_dmeasurement_c,
                    skeleton = vectorfield(SEIRWL_ode_c),
+                   initializer = SEIRWL_initializer_c,
                    times = "time",
                    t0 = 1,
                    zeronames = "Inc", 
-                   paramnames = c("R0", "inf_d", "D_lat", "D_imm", "alpha", "rho"),
-                   statenames = c("S", "E", "I", "T", "L", "Inc"),
-                   obsnames = c("obs"))
+                   paramnames = c("R0","inf_d","lat_d","imm_d","win_d","rho"),
+                   statenames = c("S","E","I","R","W","L","Inc"),
+                   obsnames = c("inc"))
+
+theta <- c(R0=1.15,inf_d=1.5,lat_d=5,imm_d=4,win_d=2,rho=0.8)
+sim <- simulate(SEIRWL_pomp,params=theta,nsim=50,as.data.frame=TRUE,states=TRUE)
+traj <- trajectory(SEIRWL_pomp,params=theta)
+pf <-  pfilter(SEIRWL_pomp,Np=1000,params=c(R0=5,inf_d=2,lat_d=1,imm_d=5,win_d=2,rho=0.8))
+ 
+SEIRWL_pomp %>% 
+  simulate(params=theta,nsim=9,as.data.frame=TRUE,include.data=TRUE) %>%
+  ggplot(aes(x=time,y=inc,group=sim,color=(sim=="data")))+
+  guides(color=FALSE)+
+  geom_line()+facet_wrap(~sim,ncol=2)
 
 
-pmcmc(
-  pomp(ou2,dprior=Csnippet("
-                           lik = dnorm(alpha_2,-0.5,1,1) + dnorm(alpha_3,0.3,1,1);
-                           lik = (give_log) ? lik : exp(lik);"),
-       paramnames=c("alpha.2","alpha.3")),
-  Nmcmc=2000,Np=500,verbose=TRUE,
-  proposal=mvn.rw.adaptive(rw.sd=c(alpha.2=0.01,alpha.3=0.01),
-                           scale.start=200,shape.start=100)) -> chain
-continue(chain,Nmcmc=2000,proposal=mvn.rw(covmat(chain))) -> chain
-plot(chain)
-chain <- pmcmc(chain)
-plot(chain)
+prop.sd <- rep(0.01, length(theta))
+names(prop.sd) <- names(theta)
+pmcmc_out <- pmcmc(SEIRWL_pomp, Nmcmc = 5000, Np = 200,start = theta,verbose=TRUE, proposal = mvn.rw.adaptive(rw.sd = prop.sd, 
+                                                                               scale.start = 100, shape.start = 200), max.fail = Inf)
+
+lhs <- sobolDesign(lower=c(R0=1,inf_d=1,lat_d=1,imm_d=1,win_d=1,rho=0.1),
+                   upper=c(R0=10,inf_d=20,lat_d=20,imm_d=20,win_d=20,rho=0.99),nseq=100)
+
+mif_out <- mif2(SEIRWL_pomp, Nmif = 100, Np = 500, cooling.fraction.50 = 0.01, cooling.type = "hyperbolic",
+                rw.sd = rw.sd(R0=0.5,inf_d=0.5,lat_d=0.5,imm_d=0.5,win_d=0.5,rho=0.1), start = theta, verbose = TRUE)
+
+ggplot(data=melt(conv.rec(mif_out)),
+       aes(x=iteration,y=value))+
+  geom_line()+
+  guides(color=FALSE)+
+  facet_wrap(~variable,scales="free_y")+
+  theme_bw()
+
+SEITL.mf.sim <- simulate(mif_out, nsim = 10, as.data.frame = TRUE, include.data = TRUE)
+plotTraj(SEITL.mf.sim, data = FluTdC1971, state.names = "inc")
