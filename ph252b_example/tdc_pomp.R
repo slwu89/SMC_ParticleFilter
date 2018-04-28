@@ -138,7 +138,7 @@ SEIRWL_pomp <- pomp(data = FluTdC1971[, c("time", "obs")],
                    times = "time",
                    t0 = 1,
                    zeronames = "Inc", 
-                   paramnames = c("R0", "D_inf", "D_lat", "D_imm", "alpha", "rho"),
+                   paramnames = c("R0", "inf_d", "D_lat", "D_imm", "alpha", "rho"),
                    statenames = c("S", "E", "I", "T", "L", "Inc"),
                    obsnames = c("obs"))
 
