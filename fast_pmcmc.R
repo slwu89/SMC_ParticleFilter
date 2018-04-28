@@ -183,7 +183,7 @@ SEIRWL_stoch <- function(theta,init_state,times){
 #####################
 
 #parallel implementation of particle filter algorithm
-particle_filter <- function(model,theta,init_state,data,n_particles,progress=TRUE,vis=TRUE){
+particle_filter <- function(model,theta,init_state,data,n_particles,progress=TRUE,vis=FALSE){
   
   #redefine variables in function environment for parallel backend
   theta <- theta
@@ -279,30 +279,31 @@ particle_filter <- function(model,theta,init_state,data,n_particles,progress=TRU
 }
 
 #initialize variables
-prev_dat <- read.csv("/Users/slwu89/Dropbox/Academics/Spring 2015/PH252B/Week 9/SIRPrevData.csv")
+dir <- "/Users/slwu89/Desktop/git/StochasticInference/"
+# prev_dat <- read.csv(paste0("SIRPrevData.csv"))
+
 init_theta_sir <- c(R0=1.5,inf_dur=5)
-init_state_sir <- c(S=999,I=1,R=0)
-
-
 init_theta_seirl <- c(R0=7,lat_dur=1,inf_dur=4,imm_dur=10,alpha=0.5)
 init_theta_seirwl <- c(R0=5,lat_dur=1,inf_dur=4,imm_dur=10,win_dur=5)
 
+init_state_tdc_sir <- c(S=279,I=2,R=3)
 init_state_tdc_seirl <- c(S=279,E=0,I=2,R=3,L=0)
 init_state_tdc_seirwl <- c(S=279,E=0,I=2,R=3,W=0,L=0)
 
 SEIRL_stoch(init_theta_seirl,init_state_tdc_seirl,times=1:59)
 SEIRWL_stoch(init_theta_seirwl,init_state_tdc_seirwl,times=1:59)
 
-tdc_dat <- read.csv("/Users/slwu89/Dropbox/Academics/Spring 2015/PH252B/Week 10/FluTdCIncData.csv")
+tdc_dat <- read.csv(paste0(dir,"FluTdCIncData.csv"))
 names(tdc_dat) <- c("time","I")
 
 #register parallel backend
-nodes <- detectCores()-2
-cl <- parallel::makeForkCluster(nodes)
-registerDoParallel(cl)
+nodes <- parallel::detectCores()
+cl <- parallel::makePSOCKcluster(nodes)
+doSNOW::registerDoSNOW(cl)
 
-system.time(particle_filter(model=SEIRL_stoch,theta=init_theta_seirl,init_state=init_state_tdc_seirl,data=tdc_dat,n_particles=20,progress=TRUE,vis=FALSE))
-system.time(particle_filter(model=SEIRWL_stoch,theta=init_theta_seirwl,init_state=init_state_tdc_seirwl,data=tdc_dat,n_particles=20,progress=TRUE,vis=FALSE))
+system.time(particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_tdc_sir,data=tdc_dat,n_particles=50,progress=TRUE,vis=FALSE))
+system.time(particle_filter(model=SEIRL_stoch,theta=init_theta_seirl,init_state=init_state_tdc_seirl,data=tdc_dat,n_particles=50,progress=TRUE,vis=FALSE))
+system.time(particle_filter(model=SEIRWL_stoch,theta=init_theta_seirwl,init_state=init_state_tdc_seirwl,data=tdc_dat,n_particles=50,progress=TRUE,vis=FALSE))
 
 stopCluster(cl)
 rm(cl)
@@ -341,7 +342,7 @@ prior_sir <- function(theta){
 
 #posterior target distribution
 posterior_smc <- function(theta){
-  log_prior <- prior_smc(theta=theta)
+  log_prior <- prior_seirwl(theta=theta)
   log_likelihood <- particle_filter(model=SEIRWL_stoch,theta=theta,init_state=init_state_tdc_seirwl,data=tdc_dat,n_particles=20,progress=TRUE,vis=FALSE)$loglike
   log_posterior <- log_prior + log_likelihood
   return(log_posterior)
@@ -370,7 +371,7 @@ pmcmc_sir <- mcmcMH(target=posterior_sir,init.theta=init_theta_sir,n.iterations=
 ###################################
 
 #extract data from particle filter output
-pf_vis <- particle_filter(model=SIR_stoch,theta=init_theta,init_state=init_state,data=swine_dat,n_particles=10,progress=TRUE)
+pf_vis <- particle_filter(model=SIR_stoch,theta=init_theta_sir,init_state=init_state_sir,data=swine_dat,n_particles=10,progress=TRUE)
 pf_vis <- pf_vis$vis_dat
 
 #extract incidence trajectories of each particle from results
