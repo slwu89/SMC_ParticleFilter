@@ -1,6 +1,4 @@
-Rcpp::sourceCpp('Desktop/git/StochasticInference/ph252b_example/gillespieSSA.cpp')
-
-
+Rcpp::sourceCpp("/Users/slwu89/Desktop/git/StochasticInference/ph252b_example/gillespieSSA.cpp")
 
 #create transition matrix for Markov process
 transSEIRL <- matrix(
@@ -28,24 +26,22 @@ tdcOut = Reduce(f = "rbind",x = tdcOut$trace)
 matplot(tdcOut,type="l",lty=1)
 
 # stochasticSEIRL
-# 
+#
 stochasticSEIRL <- function(theta, initState, transMat, times, seed){
-  
+
   modOut = gillespieDirect(theta = theta,initState = initState,trans = transMat,tEnd = times[length(times)]-1,seed = seed,info = FALSE)
   modTraj = Reduce(f = "rbind",x = modOut$trace)
-  
+
   # interpolate continuous time Markov process output to discrete time points
   modOut$times = modOut$times + min(times)
   intOut = apply(X = modTraj,MARGIN = 2,FUN = function(x){
     approx(x = modOut$times,y = x,xout = times,method = "constant")$y
   })
-  
+
   return(data.frame(time=times,intOut))
 }
 
-
-
-
-
-
-
+# n <- 20
+# ensemble <- mclapply(X = runif(n = n,min = 1,max = 1e7),FUN = function(i){
+#   stochasticSEIRL(theta = theta,initState = tdc_init_state,transMat = transSEIRL,times = 1:100,seed = i)
+# })
