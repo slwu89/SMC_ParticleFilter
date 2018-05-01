@@ -20,7 +20,6 @@ FluTdC1971 <- read.csv2(paste0(dir,"FluTdCIncData.csv"),header = T,sep = ",")
 
 # ODE version of "window of re-infection" model
 SEIRWL_ode_c <- Csnippet("
-                         
                          double rates[6];                  /* rates of movement between compartments */
                         
                          /* total population size */  
@@ -144,6 +143,7 @@ SEIRWL_initializer_c <- Csnippet("
                                  R = 3;
                                  W = 0;
                                  L = 0;
+                                 Inc = 0;
                                  ")
 
 # pomp object
