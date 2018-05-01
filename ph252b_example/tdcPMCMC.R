@@ -41,7 +41,7 @@ stochasticSEIRL <- function(theta, initState, transMat, times, seed){
   return(data.frame(time=times,intOut))
 }
 
-# n <- 20
-# ensemble <- mclapply(X = runif(n = n,min = 1,max = 1e7),FUN = function(i){
-#   stochasticSEIRL(theta = theta,initState = tdc_init_state,transMat = transSEIRL,times = 1:100,seed = i)
-# })
+n <- 20
+ensemble <- mclapply(X = runif(n = n,min = 1,max = 1e7),FUN = function(i){
+  stochasticSEIRL(theta = theta,initState = tdc_init_state,transMat = transSEIRL,times = 1:100,seed = i)
+})
